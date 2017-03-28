@@ -1,4 +1,5 @@
 require 'net/ssh'
+require 'net/ssh/connection/keepalive'
 
 module Net; module SSH; module Multi
   # Encapsulates the connection information for a single remote server, as well
@@ -186,6 +187,7 @@ module Net; module SSH; module Multi
           Net::SSH.start(host, user, options)
         end
 
+        @keepalive = Net::SSH::Connection::Keepalive.new(session)
         session[:server] = self
         session
       rescue ::Timeout::Error => error
@@ -218,6 +220,13 @@ module Net; module SSH; module Multi
         readers.select do |io|
           io.respond_to?(:pending_write?) && io.pending_write?
         end
+      end
+
+      def keepalive_if_needed(readers, writers)
+        listeners = session.listeners.keys
+        readers = readers || []
+        writers = writers || []
+        @keepalive.send_as_needed(!(listeners & readers).empty? || !(listeners & writers).empty?)
       end
 
       # Runs the post-process action on the session, if the session has been

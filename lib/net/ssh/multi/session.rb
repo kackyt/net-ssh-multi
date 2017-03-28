@@ -434,6 +434,8 @@ module Net; module SSH; module Multi
 
       readers, writers, = IO.select(readers, writers, nil, wait)
 
+      server_list.each { |server| server.keepalive_if_needed(readers, writers) }
+
       if readers
         return postprocess(readers, writers)
       else
